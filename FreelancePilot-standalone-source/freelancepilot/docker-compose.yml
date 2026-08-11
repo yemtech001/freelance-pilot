@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: freelancepilot
+      POSTGRES_PASSWORD: freelancepilot
+      POSTGRES_DB: freelancepilot
+    volumes:
+      - freelancepilot_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U freelancepilot -d freelancepilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://freelancepilot:freelancepilot@postgres:5432/freelancepilot
+      DATABASE_SSL: "false"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1/chat/completions}
+    ports:
+      - "3000:3000"
+    command: sh -c "npm run migrate && npm start"
+volumes:
+  freelancepilot_pg:
